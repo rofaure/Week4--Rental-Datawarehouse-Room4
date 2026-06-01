@@ -1,49 +1,40 @@
 # Week4--Rental-Datawarehouse-Room4
-Week 4 mini-project: Rental operations database and data warehouse. SQL Server operational DB, star schema DW, ETL scripts, and Power BI reports.
+
+Week 4 mini-project: rental operations database and data warehouse for a light transport equipment rental company. The project includes a SQL Server operational database, a star schema data warehouse, ETL scripts, validation queries, and Power BI reporting.
 
 ## Project
-Design and implement an operational database and data warehouse for a light 
-transport equipment rental company (e-bikes, scooters, kickboards).
+
+Design and implement an operational database and a data warehouse for a company that rents light transport equipment such as e-bikes, scooters, and kickboards.
+
+The operational database supports the core rental process:
+
+1. Customers rent one or more physical equipment items.
+2. Rentals start at a pickup location and may end at the same or a different return location.
+3. A rental transaction can contain multiple rented items.
+4. Each physical item belongs to a model, and each model belongs to an equipment category.
+5. Items can be tracked through maintenance records.
+6. Rental locations can represent both staffed stores and unmanned stations.
 
 ## Stack
-- SQL Server (SSMS)
+
+- Microsoft SQL Server, SQL Server Management Studio
 - Power BI Desktop
 - Git
 
 ## Folder structure
+
+```text
 /sql
-  /operational       ← CREATE TABLE + INSERT scripts for the ODB
-  /warehouse         ← CREATE TABLE scripts for DW (Dim + Fact)
+  /operational       CREATE TABLE and INSERT scripts for the operational database
+  /warehouse         CREATE TABLE scripts for the data warehouse dimensions and facts
 /etl
-  /dimensions        ← One script per Dim table load
-  /facts             ← FactRental load script
-  /validation        ← Queries comparing ODB vs DW totals
+  /dimensions        One script per dimension table load
+  /facts             FactRental load script
+  /validation        Queries comparing operational database totals with warehouse totals
 /docs
-  erd.png            ← ERD screenshot or export
-  star_schema.png    ← Star schema diagram
-  fact_grain.md      ← One sentence defining the fact grain
+  erd.png            ERD screenshot or export
+  star_schema.png    Star schema diagram
+  fact_grain.md      One sentence defining the fact grain
 /powerbi
-  report.pbix        ← Power BI file
-
-
-## Operational Database Design
-The ODB was designed iteratively through four review cycles.
-
-The core modeling decision was the equipment hierarchy: rather than a flat 
-Equipment table, we split it into EquipmentCategory → Model → Item, where 
-Item represents a single physical rentable device with its own serial number 
-and status. Rental price (hourly_rate) lives on Model, not on the physical item.
-
-RentalStore and RentalStation were consolidated into a single RentalLocation 
-table with an is_manned bit flag, keeping the schema clean without losing the 
-store vs station distinction needed for reporting.
-
-RentalTransaction was split into a header/lines pattern: RentalTransaction holds 
-the context (customer, location, employee), and RentalTransactionLine holds one 
-row per physical item rented. This gives full per-item traceability and makes 
-quantity implicit — derived by counting lines per transaction.
-
-MaintenanceRecord was added as a separate table linked to Item, enabling 
-equipment lifecycle tracking without polluting the rental transaction model.
-
-Fact grain for the data warehouse: one row = one transaction line.
+  report.pbix        Power BI report file
+```
