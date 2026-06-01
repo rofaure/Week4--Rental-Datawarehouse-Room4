@@ -18,7 +18,7 @@ CREATE TABLE MiniProject.Customer
 	 country     nvarchar(50) NOT NULL ,
 	 city        nvarchar(50) NOT NULL ,
 	 email       nvarchar(200) NOT NULL ,
-	 phone       nvarchar(50) NOT NULL ,
+	 phone       nvarchar(50) NOT NULL
 );
 GO
 
@@ -29,7 +29,7 @@ CREATE TABLE MiniProject.RentalLocation (
 	city NVARCHAR(50) NOT NULL,
 	country NVARCHAR(50) NOT NULL,
 	is_manned BIT NOT NULL DEFAULT 0,
-	employee_id INT NULL,
+	employee_id INT NULL
 );
 
 CREATE TABLE MiniProject.RentalTransaction (
@@ -37,17 +37,17 @@ CREATE TABLE MiniProject.RentalTransaction (
 	customer_id INT NOT NULL,
 	pickup_location_id INT NOT NULL,
 	return_location_id INT NULL,
-	employee_id INT NULL,
 	rental_start DATETIME NOT NULL,
 	rental_end DATETIME NULL,
-	total_amount DECIMAL(18,2) NULL,
+	total_amount DECIMAL(18,2) NULL
 );
 
 CREATE TABLE MiniProject.RentalTransactionLines (
-	transactionline_id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+	transactionline_id INT IDENTITY(1,1) NOT NULL,
 	transaction_id INT NOT NULL,
 	item_id INT NOT NULL,
 	line_amount DECIMAL(18,2) NULL,
+CONSTRAINT PK_RentalTransactionLines PRIMARY KEY (transaction_id, transactionline_id)
 );
 
 CREATE TABLE MiniProject.Employee (
@@ -63,7 +63,8 @@ CREATE TABLE MiniProject.EquipmentCategory (
 );
 
 CREATE TABLE MiniProject.Model (
-	category_id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+	model_id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+	category_id INT NOT NULL,
 	brand nvarchar(50) NOT NULL,
 	name nvarchar(50) NOT NULL,
 	hourly_rate decimal(18,2) NOT NULL
@@ -71,7 +72,7 @@ CREATE TABLE MiniProject.Model (
 
 CREATE TABLE MiniProject.Item (
 	item_id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-	model_id INT IDENTITY(1,1) NOT NULL,
+	model_id INT NOT NULL,
 	status nvarchar(50) NOT NULL,
 	serial_number nvarchar(50) NOT NULL,
 	is_usable bit NOT NULL
@@ -83,5 +84,51 @@ CREATE TABLE MiniProject.MaintenanceRecord (
 	maintenance_end date NULL,
 	type nvarchar(50) NULL,
 	cost decimal(18,2) NOT NULL,
-	item_id INT IDENTITY(1,1) NOT NULL
+	item_id INT NOT NULL
 );
+
+-- FOREIGN KEYS
+ALTER TABLE MiniProject.RentalLocation
+ADD CONSTRAINT FK_RentalLocation_Employee
+FOREIGN KEY (employee_id)
+REFERENCES MiniProject.Employee(employee_id);
+ 
+ALTER TABLE MiniProject.Model
+ADD CONSTRAINT FK_Model_Category
+FOREIGN KEY (category_id)
+REFERENCES MiniProject.EquipmentCategory(category_id);
+ 
+ALTER TABLE MiniProject.Item
+ADD CONSTRAINT FK_Item_Model
+FOREIGN KEY (model_id)
+REFERENCES MiniProject.Model(model_id);
+ 
+ALTER TABLE MiniProject.RentalTransaction
+ADD CONSTRAINT FK_RentalTransaction_Customer
+FOREIGN KEY (customer_id)
+REFERENCES MiniProject.Customer(customer_id);
+ 
+ALTER TABLE MiniProject.RentalTransaction
+ADD CONSTRAINT FK_RentalTransaction_Pickup
+FOREIGN KEY (pickup_location_id)
+REFERENCES MiniProject.RentalLocation(rentallocation_id);
+ 
+ALTER TABLE MiniProject.RentalTransaction
+ADD CONSTRAINT FK_RentalTransaction_Return
+FOREIGN KEY (return_location_id)
+REFERENCES MiniProject.RentalLocation(rentallocation_id);
+ 
+ALTER TABLE MiniProject.RentalTransactionLines
+ADD CONSTRAINT FK_RentalLines_Transaction
+FOREIGN KEY (transaction_id)
+REFERENCES MiniProject.RentalTransaction(transaction_id);
+ 
+ALTER TABLE MiniProject.RentalTransactionLines
+ADD CONSTRAINT FK_RentalLines_Item
+FOREIGN KEY (item_id)
+REFERENCES MiniProject.Item(item_id);
+ 
+ALTER TABLE MiniProject.MaintenanceRecord
+ADD CONSTRAINT FK_Maintenance_Item
+FOREIGN KEY (item_id)
+REFERENCES MiniProject.Item(item_id);
