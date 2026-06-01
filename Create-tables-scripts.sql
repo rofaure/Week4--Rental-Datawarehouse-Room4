@@ -1,13 +1,16 @@
 USE RentalOperationsDB;
 GO
 
-
+-- ============================================================
 --Creating schema
+-- ============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'MiniProject')
     EXEC('CREATE SCHEMA MiniProject');
 GO
 
+-- ============================================================
 --Creating tables without FK, constraints and checks
+-- ============================================================
 IF NOT EXISTS (SELECT * FROM sys.tables t join sys.schemas s ON (t.schema_id = s.schema_id) WHERE s.name='MiniProject' and t.name='Customer')
 CREATE TABLE MiniProject.Customer
 (
@@ -87,7 +90,9 @@ CREATE TABLE MiniProject.MaintenanceRecord (
 	item_id INT NOT NULL
 );
 
+-- ============================================================
 -- FOREIGN KEYS
+-- ============================================================
 ALTER TABLE MiniProject.RentalLocation
 ADD CONSTRAINT FK_RentalLocation_Employee
 FOREIGN KEY (employee_id)
@@ -132,3 +137,45 @@ ALTER TABLE MiniProject.MaintenanceRecord
 ADD CONSTRAINT FK_Maintenance_Item
 FOREIGN KEY (item_id)
 REFERENCES MiniProject.Item(item_id);
+
+-- ============================================================
+-- UNIQUE CONSTRAINTS 
+-- ============================================================
+ALTER TABLE MiniProject.Customer
+ADD CONSTRAINT UQ_Customer_Email
+UNIQUE (email);
+ 
+ALTER TABLE MiniProject.RentalTransactionLines
+ADD CONSTRAINT CK_RentalLines_LineAmount
+CHECK (line_amount IS NULL OR line_amount > 0);
+ 
+ALTER TABLE MiniProject.Item
+ADD CONSTRAINT UQ_Item_SerialNumber
+UNIQUE (serial_number);
+ 
+ALTER TABLE MiniProject.RentalTransactionLines
+ADD CONSTRAINT UQ_RentalLines_TransactionItem
+UNIQUE (transaction_id, item_id);
+GO
+ 
+ 
+-- ============================================================
+-- CHECK CONSTRAINTS
+-- ============================================================
+ 
+ALTER TABLE MiniProject.Item
+ADD CONSTRAINT CK_Item_Status
+CHECK (status IN ('available', 'rented', 'maintenance', 'retired'));
+ 
+ALTER TABLE MiniProject.RentalTransaction
+ADD CONSTRAINT CK_RentalTransaction_Dates
+CHECK (rental_end IS NULL OR rental_end > rental_start);
+ 
+ALTER TABLE MiniProject.MaintenanceRecord
+ADD CONSTRAINT CK_Maintenance_Dates
+CHECK (maintenance_end IS NULL OR maintenance_end > maintenance_start);
+ 
+ALTER TABLE MiniProject.MaintenanceRecord
+ADD CONSTRAINT CK_Maintenance_Type
+CHECK (type IN ('Inspection', 'Repair', 'Battery Replacement', 'Other'));
+GO
