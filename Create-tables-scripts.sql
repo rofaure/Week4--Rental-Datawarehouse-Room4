@@ -50,3 +50,38 @@ CREATE TABLE MiniProject.RentalTransactionLines (
 	line_amount DECIMAL(18,2) NULL,
 );
 
+CREATE TABLE MiniProject.Employee (
+	employee_id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+	first_name nvarchar(50) NOT NULL,
+	last_name nvarchar(50) NOT NULL,
+	role nvarchar(50) NOT NULL
+);
+
+CREATE TABLE MiniProject.EquipmentCategory (
+	category_id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+	name nvarchar(50) NOT NULL
+);
+
+CREATE TABLE MiniProject.Model (
+	category_id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+	brand nvarchar(50) NOT NULL,
+	name nvarchar(50) NOT NULL,
+	hourly_rate decimal(18,2) NOT NULL
+);
+
+CREATE TABLE MiniProject.Item (
+	item_id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+	model_id INT IDENTITY(1,1) NOT NULL,
+	status nvarchar(50) NOT NULL,
+	serial_number nvarchar(50) NOT NULL,
+	is_usable bit NOT NULL
+);
+
+CREATE TABLE MiniProject.MaintenanceRecord (
+	maintenance_id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+	maintenance_start date NOT NULL,
+	maintenance_end date NULL,
+	type nvarchar(50) NULL,
+	cost decimal(18,2) NOT NULL,
+	item_id INT IDENTITY(1,1) NOT NULL
+);
