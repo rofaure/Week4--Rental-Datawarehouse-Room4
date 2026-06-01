@@ -107748,4 +107748,4 @@ SELECT TOP 10 * FROM MiniProject.MaintenanceRecord;
 SELECT TOP 10 * FROM MiniProject.Model;
 SELECT TOP 10 * FROM MiniProject.RentalLocation;
 SELECT TOP 10 * FROM MiniProject.RentalTransaction;
-SELECT TOP 10 * FROM MiniProject.RentalTransactionLines;
+SELECT * FROM MiniProject.RentalTransactionLines;
