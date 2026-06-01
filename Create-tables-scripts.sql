@@ -1,3 +1,11 @@
+-- ============================================================
+--Creating database_name
+-- ============================================================
+
+CREATE DATABASE RentalOperationsDB;
+GO
+
+
 USE RentalOperationsDB;
 GO
 
