@@ -17,7 +17,7 @@ The operational database supports the core rental process:
 
 ## Stack
 
-- SQL Server / SSMS
+- Microsoft SQL Server, SQL Server Management Studio
 - Power BI Desktop
 - Git
 
