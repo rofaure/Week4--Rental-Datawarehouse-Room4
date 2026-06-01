@@ -54,6 +54,41 @@ Implications of this grain:
 - Line-level rental revenue is calculated from `FactSales.price`.
 - Transaction-level totals must be handled carefully because `total_amount` is repeated on every line of a multi-item transaction.
 
+## Alternate Keys / Operational Business Keys
+
+The data warehouse uses surrogate keys as primary keys in the dimension tables, such as `customer_key`, `geography_key`, `item_key`, and `date_key`. In addition to these warehouse keys, selected keys from the operational database are kept as **alternate keys**. These alternate keys preserve traceability back to the operational database and support reliable ETL lookups, duplicate detection, and reconciliation between the ODB and DW.
+
+| Warehouse table | Alternate key | Source in operational database | Purpose |
+|---|---|---|---|
+| `DimGeography` | (`rentallocation_id`, `employee_id`) | `RentalLocation`, `Employee` | Identifies the original rental location and its responsible employee from the operational system. |
+| `DimItem` | (`item_id`, `model_id`, `category_id`, `maintenance_id`) | `Item`, `Model`, `EquipmentCategory`, `MaintenanceRecord` | Identifies a physical rentable item together with its model, category, and maintenance context. |
+| `DimCustomer` | (`customer_id`) | `Customer` | Links each warehouse customer row back to the original operational customer. |
+| `FactSales` | (`transaction_id`, `transactionlines_id`) | `RentalTransaction`, `RentalTransactionLines` | Identifies the original rental transaction line that produced the fact row. |
+
+These alternate keys should be treated as **business keys from the operational database**, while the warehouse surrogate keys remain the main keys used for fact-to-dimension joins. During ETL, the alternate keys are used to look up the correct dimension rows before inserting records into `FactSales`.
+
+Recommended uniqueness rules:
+
+```sql
+ALTER TABLE Miniproject.DimGeography
+ADD CONSTRAINT AK_DimGeography_RentalLocation_Employee
+UNIQUE (rentallocation_id, employee_id);
+
+ALTER TABLE Miniproject.DimItem
+ADD CONSTRAINT AK_DimItem_Item_Model_Category_Maintenance
+UNIQUE (item_id, model_id, category_id, maintenance_id);
+
+ALTER TABLE Miniproject.DimCustomer
+ADD CONSTRAINT AK_DimCustomer_Customer
+UNIQUE (customer_id);
+
+ALTER TABLE Miniproject.FactSales
+ADD CONSTRAINT AK_FactSales_Transaction_Line
+UNIQUE (transaction_id, transactionlines_id);
+```
+
+> Note: If `employee_id` is part of the `DimGeography` alternate key, it should also be physically included in the `DimGeography` table definition.
+
 ## Fact Table Details
 
 ### `Miniproject.FactSales`
