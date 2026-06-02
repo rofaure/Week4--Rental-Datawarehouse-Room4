@@ -1,8 +1,12 @@
--- ============================================================
--- Delete all data from all tables in RentalDW
--- ============================================================
-
 USE RentalDW;
+GO
+
+-- Drop stored procedures in the schema first
+DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimGeography;
+DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimItem;
+DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimCustomer;
+DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimDate;
+DROP PROCEDURE IF EXISTS MiniProject.usp_Load_FactSales;
 GO
 
 -- Drop all foreign keys in MiniProject schema
@@ -21,7 +25,7 @@ WHERE s.name = 'MiniProject';
 EXEC sp_executesql @sql;
 GO
 
--- Drop all remaining constraints: PK, UQ, CK, DEFAULT
+-- Drop remaining constraints
 DECLARE @sql NVARCHAR(MAX) = N'';
 
 SELECT @sql += N'
@@ -38,14 +42,6 @@ WHERE s.name = 'MiniProject'
 EXEC sp_executesql @sql;
 GO
 
--- Optional: delete all data first
-DELETE FROM MiniProject.FactSales;
-DELETE FROM MiniProject.DimItem;
-DELETE FROM MiniProject.DimGeography;
-DELETE FROM MiniProject.DimDate;
-DELETE FROM MiniProject.DimCustomer;
-GO
-
 -- Drop tables
 DROP TABLE IF EXISTS MiniProject.FactSales;
 DROP TABLE IF EXISTS MiniProject.DimItem;
@@ -54,6 +50,6 @@ DROP TABLE IF EXISTS MiniProject.DimDate;
 DROP TABLE IF EXISTS MiniProject.DimCustomer;
 GO
 
--- Optional: drop schema if empty
+-- Drop schema
 DROP SCHEMA IF EXISTS MiniProject;
 GO
