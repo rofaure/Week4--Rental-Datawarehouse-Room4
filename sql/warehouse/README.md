@@ -26,8 +26,6 @@ The schema in the diagram contains the following tables:
 | `DimGeography` | Dimension | Stores rental location attributes such as name, address, city, country, and whether the location is manned. |
 | `DimItem` | Dimension | Stores denormalized equipment information, including item, model, category, status, usability, hourly rate, and maintenance attributes. |
 
-The diagram uses the schema name `Miniproject`. The operational database documentation used `MiniProject`. The SQL scripts should choose one spelling and use it consistently across all tables, foreign keys, ETL scripts, and Power BI connections.
-
 ## Business Process Modeled
 
 The fact table models the rental sales process.
@@ -70,19 +68,19 @@ These alternate keys should be treated as **business keys from the operational d
 Recommended uniqueness rules:
 
 ```sql
-ALTER TABLE Miniproject.DimGeography
+ALTER TABLE MiniProject.DimGeography
 ADD CONSTRAINT AK_DimGeography_RentalLocation_Employee
 UNIQUE (rentallocation_id, employee_id);
 
-ALTER TABLE Miniproject.DimItem
+ALTER TABLE MiniProject.DimItem
 ADD CONSTRAINT AK_DimItem_Item_Model_Category_Maintenance
 UNIQUE (item_id, model_id, category_id, maintenance_id);
 
-ALTER TABLE Miniproject.DimCustomer
+ALTER TABLE MiniProject.DimCustomer
 ADD CONSTRAINT AK_DimCustomer_Customer
 UNIQUE (customer_id);
 
-ALTER TABLE Miniproject.FactSales
+ALTER TABLE MiniProject.FactSales
 ADD CONSTRAINT AK_FactSales_Transaction_Line
 UNIQUE (transaction_id, transactionlines_id);
 ```
@@ -91,7 +89,7 @@ UNIQUE (transaction_id, transactionlines_id);
 
 ## Fact Table Details
 
-### `Miniproject.FactSales`
+### `MiniProject.FactSales`
 
 Stores the measurable rental activity at transaction-line grain.
 
@@ -120,7 +118,7 @@ Design notes:
 
 ## Dimension Table Details
 
-### `Miniproject.DimCustomer`
+### `MiniProject.DimCustomer`
 
 Stores customer attributes for reporting.
 
@@ -143,7 +141,7 @@ Design notes:
 - For this mini-project, the dimension can be loaded as a Type 1 dimension, where changed customer attributes overwrite previous values.
 - If historical customer attribute changes become important later, this dimension can be extended to Type 2 with effective dates and a current-row flag.
 
-### `Miniproject.DimDate`
+### `MiniProject.DimDate`
 
 Stores calendar attributes. The same date dimension is used twice by `FactSales`: once for the rental start date and once for the rental end date.
 
@@ -166,7 +164,7 @@ Design notes:
 - The ETL should derive `startdate_key` from the date part of `RentalTransaction.rental_start`.
 - The ETL should derive `enddate_key` from the date part of `RentalTransaction.rental_end` when `rental_end` is not null.
 
-### `Miniproject.DimGeography`
+### `MiniProject.DimGeography`
 
 Stores rental location and geography attributes.
 
@@ -188,7 +186,7 @@ Design notes:
 - If reporting needs to compare pickup and return locations, add a second foreign key to the same dimension, for example `pickup_geography_key` and `return_geography_key`. This is called a role-playing dimension.
 - `rentallocation_id` is retained for source traceability and ETL lookup.
 
-### `Miniproject.DimItem`
+### `MiniProject.DimItem`
 
 Stores denormalized equipment information. It combines data from operational equipment category, model, item, and maintenance records.
 
