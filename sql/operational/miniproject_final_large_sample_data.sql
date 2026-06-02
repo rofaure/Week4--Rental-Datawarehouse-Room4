@@ -54844,7 +54844,7 @@ INSERT INTO MiniProject.RentalTransactionLines (transactionline_id, transaction_
 GO
 
 INSERT INTO MiniProject.RentalTransactionLines (transactionline_id, transaction_id, item_id, line_amount) VALUES
-(1, 799, 50, 64.66),
+(2, 799, 50, 64.66),
 (1, 800, 2308, 22.07),
 (1, 801, 3867, 55.96),
 (2, 801, 3868, 50.36),
@@ -65877,8 +65877,8 @@ INSERT INTO MiniProject.RentalTransactionLines (transactionline_id, transaction_
 GO
 
 INSERT INTO MiniProject.RentalTransactionLines (transactionline_id, transaction_id, item_id, line_amount) VALUES
-(1, 9493, 3697, 33.35),
-(2, 9493, 3698, 17.12),
+(2, 9493, 3697, 33.35),
+(3, 9493, 3698, 17.12),
 (1, 9494, 3476, 36.79),
 (1, 9495, 3477, 4.12),
 (2, 9495, 3478, 4.77),
@@ -76910,7 +76910,7 @@ INSERT INTO MiniProject.RentalTransactionLines (transactionline_id, transaction_
 GO
 
 INSERT INTO MiniProject.RentalTransactionLines (transactionline_id, transaction_id, item_id, line_amount) VALUES
-(1, 18187, 2320, 33.93),
+(2, 18187, 2320, 33.93),
 (1, 18188, 3288, 34.78),
 (1, 18189, 1590, 20.72),
 (1, 18190, 2321, 24.54),
@@ -98976,7 +98976,7 @@ INSERT INTO MiniProject.RentalTransactionLines (transactionline_id, transaction_
 GO
 
 INSERT INTO MiniProject.RentalTransactionLines (transactionline_id, transaction_id, item_id, line_amount) VALUES
-(1, 35468, 167, 51.98),
+(2, 35468, 167, 51.98),
 (1, 35469, 2214, 3.83),
 (2, 35469, 2215, 2.81),
 (3, 35469, 2216, 3.67),
@@ -100982,7 +100982,7 @@ INSERT INTO MiniProject.RentalTransactionLines (transactionline_id, transaction_
 GO
 
 INSERT INTO MiniProject.RentalTransactionLines (transactionline_id, transaction_id, item_id, line_amount) VALUES
-(1, 37051, 1167, 7.99),
+(2, 37051, 1167, 7.99),
 (1, 37052, 3817, 60.02),
 (2, 37052, 3818, 57.10),
 (1, 37053, 1410, 14.65),
@@ -102988,7 +102988,7 @@ INSERT INTO MiniProject.RentalTransactionLines (transactionline_id, transaction_
 GO
 
 INSERT INTO MiniProject.RentalTransactionLines (transactionline_id, transaction_id, item_id, line_amount) VALUES
-(1, 38626, 2379, 54.22),
+(3, 38626, 2379, 54.22),
 (1, 38627, 123, 45.90),
 (1, 38628, 1058, 63.35),
 (1, 38629, 778, 18.92),
