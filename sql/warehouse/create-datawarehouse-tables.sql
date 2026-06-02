@@ -13,7 +13,8 @@ GO
 --Creating schema
 -- ============================================================
 
-CREATE SCHEMA MiniProject;
+IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'MiniProject')
+    EXEC('CREATE SCHEMA MiniProject');
 GO
 
 -- ============================================================
