@@ -2,6 +2,7 @@ USE RentalDW;
 GO
 
 -- Drop stored procedures in the schema first
+DROP PROCEDURE IF EXISTS MiniProject.LoadDimItem;
 DROP PROCEDURE IF EXISTS MiniProject.LoadDimDate;
 GO
 

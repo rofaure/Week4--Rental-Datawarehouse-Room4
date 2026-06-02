@@ -18,7 +18,7 @@ BEGIN
         SELECT TOP (DATEDIFF(day, @StartDate, @EndDate) + 1) -- calculate the range, include both dates
                -- ROW_NUMBER: every row gets a unique sequential number
                ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - 1 AS n -- SELECT NULL: Any order is fine, just assign row numbers
-        -- We're not interested in the actual contents. We only need a source that has "many rows.
+        -- We're not interested in the actual contents. We only need a source that has "many rows".
         FROM sys.all_objects -- a system view that contains metadata about objects in the database
     )
     INSERT INTO MiniProject.DimDate
