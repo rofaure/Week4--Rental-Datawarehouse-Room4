@@ -2,8 +2,10 @@ USE RentalDW;
 GO
 
 -- Drop stored procedures in the schema first
-DROP PROCEDURE IF EXISTS MiniProject.LoadDimItem;
-DROP PROCEDURE IF EXISTS MiniProject.LoadDimDate;
+DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimGeography;
+DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimItem;
+DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimCustomer;
+DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimDate;
 GO
 
 -- Drop all foreign keys in MiniProject schema
