@@ -22,6 +22,7 @@ GO
 -- ============================================================
 
 -- ************************************** MiniProject.DimCustomer
+IF NOT EXISTS (SELECT * FROM sys.tables t join sys.schemas s ON (t.schema_id = s.schema_id) WHERE s.name='MiniProject' and t.name='DimCustomer')
 CREATE TABLE MiniProject.DimCustomer
 (
  customer_key int NOT NULL ,
@@ -34,11 +35,12 @@ CREATE TABLE MiniProject.DimCustomer
  email        nvarchar(200) NOT NULL ,
  phone        nvarchar(50) NOT NULL ,
 
- CONSTRAINT PK_1 PRIMARY KEY CLUSTERED (customer_key ASC)
+ CONSTRAINT PK_DimCustomer PRIMARY KEY CLUSTERED (customer_key ASC)
 );
 GO
 
 -- ************************************** MiniProject.DimDate
+IF NOT EXISTS (SELECT * FROM sys.tables t join sys.schemas s ON (t.schema_id = s.schema_id) WHERE s.name='MiniProject' and t.name='DimDate')
 CREATE TABLE MiniProject.DimDate
 (
  date_key int NOT NULL ,
@@ -49,11 +51,12 @@ CREATE TABLE MiniProject.DimDate
  week     tinyint NOT NULL ,
  [day]    tinyint NOT NULL ,
 
- CONSTRAINT PK_1 PRIMARY KEY CLUSTERED (date_key ASC)
+ CONSTRAINT PK_DimDate PRIMARY KEY CLUSTERED (date_key ASC)
 );
 GO
 
 -- ************************************** MiniProject.DimGeography
+IF NOT EXISTS (SELECT * FROM sys.tables t join sys.schemas s ON (t.schema_id = s.schema_id) WHERE s.name='MiniProject' and t.name='DimGeography')
 CREATE TABLE MiniProject.DimGeography
 (
  geography_key     int NOT NULL ,
@@ -64,11 +67,12 @@ CREATE TABLE MiniProject.DimGeography
  country           nvarchar(50) NOT NULL ,
  is_manned         bit NOT NULL ,
 
- CONSTRAINT PK_1 PRIMARY KEY CLUSTERED (geography_key ASC)
+ CONSTRAINT PK_DimGeography PRIMARY KEY CLUSTERED (geography_key ASC)
 );
 GO
 
 -- ************************************** MiniProject.DimItem
+IF NOT EXISTS (SELECT * FROM sys.tables t join sys.schemas s ON (t.schema_id = s.schema_id) WHERE s.name='MiniProject' and t.name='DimItem')
 CREATE TABLE MiniProject.DimItem
 (
  item_key          int NOT NULL ,
@@ -88,15 +92,16 @@ CREATE TABLE MiniProject.DimItem
  maintenance_type  nvarchar(50) NOT NULL ,
  maintenance_cost  decimal(18,2) NOT NULL ,
 
- CONSTRAINT PK_1 PRIMARY KEY CLUSTERED (item_key ASC)
+ CONSTRAINT PK_DimItem PRIMARY KEY CLUSTERED (item_key ASC)
 );
 GO
 
 -- ************************************** MiniProject.FactSales
+IF NOT EXISTS (SELECT * FROM sys.tables t join sys.schemas s ON (t.schema_id = s.schema_id) WHERE s.name='MiniProject' and t.name='FactSales')
 CREATE TABLE MiniProject.FactSales
 (
- transaction_id     int identity NOT NULL ,
- transactionline_id int identity NOT NULL ,
+ transaction_id     int NOT NULL ,
+ transactionline_id int NOT NULL ,
  customer_key       int NOT NULL ,
  startdate_key      int NOT NULL ,
  enddate_key        int NULL ,
@@ -107,11 +112,11 @@ CREATE TABLE MiniProject.FactSales
  start_time         time NOT NULL ,
  end_time           time NULL ,
 
- CONSTRAINT PK_1 PRIMARY KEY CLUSTERED (transaction_id ASC, transactionline_id ASC),
- CONSTRAINT FK_1 FOREIGN KEY (customer_key)  REFERENCES MiniProject.DimCustomer(customer_key),
- CONSTRAINT FK_2 FOREIGN KEY (startdate_key)  REFERENCES MiniProject.DimDate(date_key),
- CONSTRAINT FK_3 FOREIGN KEY (enddate_key)  REFERENCES MiniProject.DimDate(date_key),
- CONSTRAINT FK_4 FOREIGN KEY (geography_key)  REFERENCES MiniProject.DimGeography(geography_key),
- CONSTRAINT FK_5 FOREIGN KEY (item_key)  REFERENCES MiniProject.DimItem(item_key)
+ CONSTRAINT PK_DimCustomer PRIMARY KEY CLUSTERED (transaction_id ASC, transactionline_id ASC),
+ CONSTRAINT FK_FactSales_DimCustomer FOREIGN KEY (customer_key)  REFERENCES MiniProject.DimCustomer(customer_key),
+ CONSTRAINT FK_FactSales_DimDate_1 FOREIGN KEY (startdate_key)  REFERENCES MiniProject.DimDate(date_key),
+ CONSTRAINT FK_FactSales_DimDate_2 FOREIGN KEY (enddate_key)  REFERENCES MiniProject.DimDate(date_key),
+ CONSTRAINT FK_FactSales_DimGeography FOREIGN KEY (geography_key)  REFERENCES MiniProject.DimGeography(geography_key),
+ CONSTRAINT FK_FactSales_DimItem FOREIGN KEY (item_key)  REFERENCES MiniProject.DimItem(item_key)
 );
 GO
