@@ -5,6 +5,10 @@
 USE RentalDW;
 GO
 
+-- Drop stored procedures in the schema first
+DROP PROCEDURE IF EXISTS MiniProject.LoadDimDate;
+GO
+
 -- Drop all foreign keys in MiniProject schema
 DECLARE @sql NVARCHAR(MAX) = N'';
 
