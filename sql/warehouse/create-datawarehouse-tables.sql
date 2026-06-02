@@ -2,7 +2,14 @@
 --Creating database_name
 -- ============================================================
 
-CREATE DATABASE RentalDW;
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.databases
+    WHERE name = 'RentalDW'
+)
+BEGIN
+    CREATE DATABASE RentalDW;
+END
 GO
 
 
@@ -112,7 +119,7 @@ CREATE TABLE MiniProject.FactSales
  start_time         time NOT NULL ,
  end_time           time NULL ,
 
- CONSTRAINT PK_DimCustomer PRIMARY KEY CLUSTERED (transaction_id ASC, transactionline_id ASC),
+ CONSTRAINT PK_FactSales PRIMARY KEY CLUSTERED (transaction_id ASC, transactionline_id ASC),
  CONSTRAINT FK_FactSales_DimCustomer FOREIGN KEY (customer_key)  REFERENCES MiniProject.DimCustomer(customer_key),
  CONSTRAINT FK_FactSales_DimDate_1 FOREIGN KEY (startdate_key)  REFERENCES MiniProject.DimDate(date_key),
  CONSTRAINT FK_FactSales_DimDate_2 FOREIGN KEY (enddate_key)  REFERENCES MiniProject.DimDate(date_key),
