@@ -2,7 +2,14 @@
 --Creating database_name
 -- ============================================================
 
-CREATE DATABASE RentalOperationsDB;
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.databases
+    WHERE name = 'RentalOperationsDB'
+)
+BEGIN
+    CREATE DATABASE RentalOperationsDB;
+END
 GO
 
 
@@ -54,7 +61,7 @@ CREATE TABLE MiniProject.RentalTransaction (
 );
 
 CREATE TABLE MiniProject.RentalTransactionLines (
-	transactionline_id INT IDENTITY(1,1) NOT NULL,
+	transactionline_id INT NOT NULL,
 	transaction_id INT NOT NULL,
 	item_id INT NOT NULL,
 	line_amount DECIMAL(18,2) NULL,
