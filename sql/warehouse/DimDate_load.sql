@@ -4,14 +4,13 @@ USE RentalDW;
 GO
 
 CREATE OR ALTER PROCEDURE MiniProject.LoadDimDate
+    @StartDate date,
+    @EndDate date
 AS
 BEGIN
     SET NOCOUNT ON;
 
     -- Generate the dates between @StartDate and @EndDate with a numbers/tally table approach
-    DECLARE @StartDate date = '2024-02-01';
-    DECLARE @EndDate   date = '2026-06-30';
-
     WITH Numbers AS
     (
         -- Generate a sequence of numbers, e.g. 0..880, which can then be added to the start date
@@ -43,7 +42,10 @@ BEGIN
 END;
 GO
 
-EXEC RentalDW.MiniProject.LoadDimDate;
+-- Define the start date and end date of DimDate here
+EXEC RentalDW.MiniProject.LoadDimDate
+    @StartDate = '2024-02-01',
+    @EndDate   = '2026-06-30';
 GO
 
 --SELECT * FROM RentalDW.MiniProject.DimDate;
