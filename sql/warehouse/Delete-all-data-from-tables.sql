@@ -6,6 +6,7 @@ DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimGeography;
 DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimItem;
 DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimCustomer;
 DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimDate;
+DROP PROCEDURE IF EXISTS MiniProject.usp_Load_FactSales;
 GO
 
 -- Drop all foreign keys in MiniProject schema
