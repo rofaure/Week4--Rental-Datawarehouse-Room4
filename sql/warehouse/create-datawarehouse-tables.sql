@@ -86,7 +86,7 @@ CREATE TABLE MiniProject.DimItem
  item_id           int NOT NULL ,
  model_id          int NOT NULL ,
  category_id       int NOT NULL ,
- maintenance_id    int NOT NULL ,
+ maintenance_id    int NULL ,
  category_name     nvarchar(50) NOT NULL ,
  model_brand       nvarchar(50) NOT NULL ,
  model_name        nvarchar(50) NOT NULL ,
@@ -94,10 +94,10 @@ CREATE TABLE MiniProject.DimItem
  serial_number     nvarchar(50) NOT NULL ,
  hourly_rate       decimal(18,2) NOT NULL ,
  is_usable         bit NOT NULL ,
- maintenance_start date NOT NULL ,
+ maintenance_start date NULL ,
  maintenance_end   date NULL ,
- maintenance_type  nvarchar(50) NOT NULL ,
- maintenance_cost  decimal(18,2) NOT NULL ,
+ maintenance_type  nvarchar(50) NULL ,
+ maintenance_cost  decimal(18,2) NULL ,
 
  CONSTRAINT PK_DimItem PRIMARY KEY CLUSTERED (item_key ASC)
 );
