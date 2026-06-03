@@ -115,7 +115,7 @@ CREATE TABLE MiniProject.FactSales
  geography_key      int NOT NULL ,
  item_key           int NOT NULL ,
  total_amount       decimal(18,2) NULL ,
- price              decimal(18,2) NOT NULL ,
+ price              decimal(18,2) NULL ,
  start_time         time NOT NULL ,
  end_time           time NULL ,
 
