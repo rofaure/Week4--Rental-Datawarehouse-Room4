@@ -1,6 +1,3 @@
-USE RentalOperationsDB;
-GO
-
 -- ============================================================
 -- Incremental operational data for testing DW refresh
 -- Period: 2026-07-01 through 2026-07-07
@@ -11,9 +8,9 @@ GO
 -- - Assumes the original large operational dataset is already loaded.
 --
 -- Inserts:
--- - New rows into MiniProject.RentalTransaction
--- - New rows into MiniProject.RentalTransactionLines
--- - New rows into MiniProject.MaintenanceRecord
+-- - New rows into RentalOperationsDB.MiniProject.RentalTransaction
+-- - New rows into RentalOperationsDB.MiniProject.RentalTransactionLines
+-- - New rows into RentalOperationsDB.MiniProject.MaintenanceRecord
 --
 -- Important:
 -- - RentalTransaction.transaction_id is IDENTITY, so new generated IDs are captured into #TransactionIdMap.
@@ -32,13 +29,34 @@ BEGIN
 END;
 GO
 
-IF OBJECT_ID('MiniProject.RentalTransaction', 'U') IS NULL
+/*
+Rule: this incremental dataset must NOT add new rental locations.
+The existing source database should already contain exactly 61 locations.
+This script only references rentallocation_id values from 1 through 61
+in RentalTransaction pickup_location_id and return_location_id.
+*/
+IF (SELECT COUNT(*) FROM RentalOperationsDB.MiniProject.RentalLocation) <> 61
+BEGIN
+    THROW 50005, 'Expected exactly 61 existing RentalLocation rows before load. This dataset must not create additional locations.', 1;
+END;
+
+IF EXISTS (
+    SELECT 1
+    FROM RentalOperationsDB.MiniProject.RentalLocation
+    WHERE rentallocation_id NOT BETWEEN 1 AND 61
+)
+BEGIN
+    THROW 50006, 'RentalLocation contains IDs outside 1-61. Fix locations before running this incremental dataset.', 1;
+END;
+GO
+
+IF OBJECT_ID('RentalOperationsDB.MiniProject.RentalTransaction', 'U') IS NULL
     THROW 50002, 'Table MiniProject.RentalTransaction does not exist.', 1;
 
-IF OBJECT_ID('MiniProject.RentalTransactionLines', 'U') IS NULL
+IF OBJECT_ID('RentalOperationsDB.MiniProject.RentalTransactionLines', 'U') IS NULL
     THROW 50003, 'Table MiniProject.RentalTransactionLines does not exist.', 1;
 
-IF OBJECT_ID('MiniProject.MaintenanceRecord', 'U') IS NULL
+IF OBJECT_ID('RentalOperationsDB.MiniProject.MaintenanceRecord', 'U') IS NULL
     THROW 50004, 'Table MiniProject.MaintenanceRecord does not exist.', 1;
 GO
 
@@ -398,7 +416,35 @@ VALUES
 (329, 1521, 17, 17, '2026-07-01 10:40:28', '2026-07-01 13:46:10', 14.70),
 (330, 1311, 13, 13, '2026-07-03 19:02:54', '2026-07-03 21:02:58', 8.50);
 
-MERGE MiniProject.RentalTransaction AS target
+/*
+Validate that this generated batch only references the 61 existing locations.
+This protects against accidentally treating the weekly dataset as 61 new locations.
+*/
+IF EXISTS (
+    SELECT 1
+    FROM #NewTransactions
+    WHERE pickup_location_id NOT BETWEEN 1 AND 61
+       OR return_location_id NOT BETWEEN 1 AND 61
+)
+BEGIN
+    THROW 50007, 'New transactions reference a location outside the existing 1-61 location range.', 1;
+END;
+
+IF EXISTS (
+    SELECT 1
+    FROM #NewTransactions AS nt
+    LEFT JOIN RentalOperationsDB.MiniProject.RentalLocation AS pickup_rl
+        ON nt.pickup_location_id = pickup_rl.rentallocation_id
+    LEFT JOIN RentalOperationsDB.MiniProject.RentalLocation AS return_rl
+        ON nt.return_location_id = return_rl.rentallocation_id
+    WHERE pickup_rl.rentallocation_id IS NULL
+       OR (nt.return_location_id IS NOT NULL AND return_rl.rentallocation_id IS NULL)
+)
+BEGIN
+    THROW 50008, 'New transactions reference a location that does not exist in RentalOperationsDB.MiniProject.RentalLocation.', 1;
+END;
+
+MERGE RentalOperationsDB.MiniProject.RentalTransaction AS target
 USING #NewTransactions AS source
     ON 1 = 0
 WHEN NOT MATCHED THEN
@@ -830,7 +876,7 @@ VALUES
 (329, 1, 841, 14.70),
 (330, 1, 767, 8.50);
 
-INSERT INTO MiniProject.RentalTransactionLines
+INSERT INTO RentalOperationsDB.MiniProject.RentalTransactionLines
 (transactionline_id, transaction_id, item_id, line_amount)
 SELECT
     ntl.transactionline_id,
@@ -841,7 +887,7 @@ FROM #NewTransactionLines AS ntl
 JOIN #TransactionIdMap AS tim
     ON tim.batch_id = ntl.batch_id;
 
-INSERT INTO MiniProject.MaintenanceRecord
+INSERT INTO RentalOperationsDB.MiniProject.MaintenanceRecord
 (maintenance_start, maintenance_end, type, cost, item_id)
 VALUES
 ('2026-07-03', '2026-07-05', 'Other', 104.03, 1472),
@@ -864,6 +910,15 @@ VALUES
 ('2026-07-01', '2026-07-02', 'Other', 39.46, 2840),
 ('2026-07-03', '2026-07-04', 'Repair', 159.81, 3432),
 ('2026-07-06', '2026-07-07', 'Battery Replacement', 264.48, 3379);
+
+/*
+Post-load rule check: location count must still be exactly 61.
+No INSERT INTO RentalOperationsDB.MiniProject.RentalLocation is allowed in this dataset.
+*/
+IF (SELECT COUNT(*) FROM RentalOperationsDB.MiniProject.RentalLocation) <> 61
+BEGIN
+    THROW 50009, 'Location count changed. The total RentalLocation count must remain 61 after this incremental load.', 1;
+END;
 
 SELECT
     'Inserted transactions' AS metric,
@@ -889,7 +944,7 @@ GO
 -- Optional verification after insert
 SELECT
     COUNT(*) AS transactions_inserted_for_next_week
-FROM MiniProject.RentalTransaction
+FROM RentalOperationsDB.MiniProject.RentalTransaction
 WHERE rental_start >= '2026-07-01'
   AND rental_start <  '2026-07-08';
 GO

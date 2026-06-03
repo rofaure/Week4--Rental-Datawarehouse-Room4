@@ -48,6 +48,7 @@ DROP TABLE IF EXISTS MiniProject.DimItem;
 DROP TABLE IF EXISTS MiniProject.DimGeography;
 DROP TABLE IF EXISTS MiniProject.DimDate;
 DROP TABLE IF EXISTS MiniProject.DimCustomer;
+DROP TABLE IF EXISTS MiniProject.ETL_Control;
 GO
 
 -- Drop schema
