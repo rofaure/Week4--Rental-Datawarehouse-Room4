@@ -18,7 +18,10 @@ The operational database supports the core rental process:
 ## Stack
 
 - Microsoft SQL Server, SQL Server Management Studio
-- Power BI Desktop
+- T-SQL stored procedures
+- Operational source database: `RentalOperationsDB`
+- Data warehouse target database: `RentalDW`
+- Power BI as the reporting layer
 - GitHub, Git
 
 ## Folder structure
@@ -29,6 +32,7 @@ The operational database supports the core rental process:
   star_schema.png    Star schema diagram of the data warehouse
 /etl                 ETL scripts for loading dimension tables and FactSales table
   /validation        Queries comparing operational database totals with warehouse totals
+  README.md          Readme file for the ETL scripts
 /powerbi
   report.pbix        Power BI report file
 /sql
