@@ -1,7 +1,7 @@
 USE RentalDW;
 GO
 
-BEGIN TRAN
+--BEGIN TRAN
 
 -- ETL CONTROL TABLE
 IF NOT EXISTS (
@@ -95,14 +95,13 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @max_key INT; -- To track the current max customer_key for incremental inserts
-    SELECT @max_key = ISNULL(MAX(customer_key), 0) FROM MiniProject.DimCustomer;
+    DELETE FROM MiniProject.DimCustomer;
 
     INSERT INTO MiniProject.DimCustomer (
         customer_key, customer_id, first_name, last_name, address, city, country, email, phone
     )
     SELECT
-        @max_key + ROW_NUMBER() OVER (ORDER BY c.customer_id) AS customer_key, -- Assign new keys sequentially starting from current max
+        ROW_NUMBER() OVER (ORDER BY c.customer_id) AS customer_key, -- Assign new keys sequentially starting from current max
         c.customer_id,
         c.first_name,
         c.last_name,
@@ -111,11 +110,7 @@ BEGIN
         c.country,
         c.email,
         c.phone
-    FROM RentalOperationsDB.MiniProject.Customer c
-    WHERE NOT EXISTS (
-        SELECT 1 FROM MiniProject.DimCustomer dc
-        WHERE dc.customer_id = c.customer_id
-    );
+    FROM RentalOperationsDB.MiniProject.Customer c;
 
     UPDATE MiniProject.ETL_Control
     SET last_run = GETDATE()
@@ -131,9 +126,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Drop FK to allow clean operations
-    ALTER TABLE MiniProject.FactSales
-        DROP CONSTRAINT FK_FactSales_DimGeography;
+    DELETE FROM MiniProject.DimGeography;
 
     INSERT INTO MiniProject.DimGeography (
         geography_key,
@@ -145,25 +138,14 @@ BEGIN
         is_manned
     )
     SELECT
-        -- geography_key: offset by existing max to avoid collisions
-        ISNULL((SELECT MAX(geography_key) FROM MiniProject.DimGeography), 0) + ROW_NUMBER() OVER (ORDER BY rl.rentallocation_id),
+        ROW_NUMBER() OVER (ORDER BY rl.rentallocation_id) AS geography_key,
         rl.rentallocation_id,
         rl.name,
         rl.address,
         rl.city,
         rl.country,
         rl.is_manned
-    FROM RentalOperationsDB.MiniProject.RentalLocation rl
-    WHERE NOT EXISTS (
-        SELECT 1 FROM MiniProject.DimGeography dg
-        WHERE dg.rentallocation_id = rl.rentallocation_id
-    );
-
-    -- Recreate FK constraint
-    ALTER TABLE MiniProject.FactSales
-        ADD CONSTRAINT FK_FactSales_DimGeography
-            FOREIGN KEY (geography_key)
-            REFERENCES MiniProject.DimGeography(geography_key);
+    FROM RentalOperationsDB.MiniProject.RentalLocation rl;
 
     UPDATE MiniProject.ETL_Control
     SET last_run = GETDATE()
@@ -173,12 +155,13 @@ BEGIN
 END;
 GO
 
-
 -- usp_Load_DimItem
 CREATE OR ALTER PROCEDURE MiniProject.usp_Load_DimItem
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    DELETE FROM MiniProject.DimItem;
 
     INSERT INTO MiniProject.DimItem (
         item_key,
@@ -199,7 +182,7 @@ BEGIN
         maintenance_cost
     )
     SELECT
-        ISNULL((SELECT MAX(item_key) FROM MiniProject.DimItem), 0) + ROW_NUMBER() OVER (ORDER BY i.item_id) AS item_key,
+        ROW_NUMBER() OVER (ORDER BY i.item_id) AS item_key,
         i.item_id,
         i.model_id,
         mo.category_id,
@@ -228,11 +211,7 @@ BEGIN
             FROM RentalOperationsDB.MiniProject.MaintenanceRecord
             GROUP BY item_id
         )
-    ) m ON i.item_id = m.item_id
-    WHERE NOT EXISTS (
-        SELECT 1 FROM MiniProject.DimItem di
-        WHERE di.item_id = i.item_id
-    );
+    ) m ON i.item_id = m.item_id;
 
     UPDATE MiniProject.ETL_Control
     SET last_run = GETDATE()
@@ -248,10 +227,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @last_run DATETIME;
-    SELECT @last_run = last_run
-    FROM MiniProject.ETL_Control
-    WHERE procedure_name = 'usp_Load_FactSales';
+    DELETE FROM MiniProject.FactSales;
 
     INSERT INTO MiniProject.FactSales (
         transaction_id,
@@ -291,14 +267,7 @@ BEGIN
     JOIN MiniProject.DimItem AS di
         ON rtl.item_id = di.item_id
     JOIN MiniProject.DimGeography AS dg
-        ON rt.pickup_location_id = dg.rentallocation_id
-    -- Only new transactions since last run
-    WHERE rt.rental_start > @last_run
-    AND NOT EXISTS (
-        SELECT 1 FROM MiniProject.FactSales f
-        WHERE f.transaction_id      = rt.transaction_id
-        AND   f.transactionline_id  = rtl.transactionline_id
-    );
+        ON rt.pickup_location_id = dg.rentallocation_id;
 
     UPDATE MiniProject.ETL_Control
     SET last_run = GETDATE()
@@ -310,6 +279,7 @@ GO
 
 ALTER TABLE MiniProject.FactSales
     ALTER COLUMN price DECIMAL(18,2) NULL;
+GO
 
 -- usp_Run_Full_ETL
 CREATE OR ALTER PROCEDURE MiniProject.usp_Run_Full_ETL
@@ -318,6 +288,9 @@ BEGIN
     SET NOCOUNT ON;
 
     PRINT '== ETL Start: ' + CONVERT(NVARCHAR, GETDATE(), 120) + ' ==';
+
+    -- Clear fact first to allow dim deletes
+    DELETE FROM MiniProject.FactSales;
 
     EXEC MiniProject.usp_Load_DimDate;
     EXEC MiniProject.usp_Load_DimCustomer;
@@ -329,21 +302,12 @@ BEGIN
 END;
 GO
 
-
--- EXECUTE FULL ETL
-EXEC MiniProject.usp_Run_Full_ETL;
-GO
-
-
 -----------------------------------------------------------
-UPDATE RentalDW.MiniProject.ETL_Control
-SET last_run = '2023-01-01';
-
 EXEC MiniProject.usp_Run_Full_ETL;
 GO
 
 SELECT * FROM MiniProject.ETL_Control;
 
 
-ROLLBACK
-COMMIT
+--ROLLBACK
+--COMMIT
