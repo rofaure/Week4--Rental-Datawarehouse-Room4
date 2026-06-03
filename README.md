@@ -29,6 +29,7 @@ The operational database supports the core rental process:
 ```text
 /docs
   erd.png            Entity-relationship diagram (ERD) of the operational database
+  presentation.pptx  PowerPoint presentation for team demo
   star_schema.png    Star schema diagram of the data warehouse
 /etl                 ETL scripts for loading dimension tables and FactSales table
   /validation        Queries comparing operational database totals with warehouse totals
