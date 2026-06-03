@@ -1,6 +1,6 @@
 # Week4--Rental-Datawarehouse-Room4
 
-Week 4 mini-project: rental operations database and data warehouse for a light transport equipment rental company. The project includes a SQL Server operational database, a star schema data warehouse, ETL scripts, validation queries, and Power BI reporting.
+Week 4 mini-project: rental operations database and data warehouse for a light transport equipment rental company. The project includes an SQL Server operational database, a star schema data warehouse, ETL scripts, validation queries, and Power BI reporting.
 
 ## Project
 
@@ -19,22 +19,22 @@ The operational database supports the core rental process:
 
 - Microsoft SQL Server, SQL Server Management Studio
 - Power BI Desktop
-- Git
+- GitHub, Git
 
 ## Folder structure
 
 ```text
-/sql
-  /operational       CREATE TABLE and INSERT scripts for the operational database
-  /warehouse         CREATE TABLE scripts for the data warehouse dimensions and facts
-/etl
-  /dimensions        One script per dimension table load
-  /facts             FactRental load script
-  /validation        Queries comparing operational database totals with warehouse totals
 /docs
-  erd.png            ERD screenshot or export
-  star_schema.png    Star schema diagram
-  fact_grain.md      One sentence defining the fact grain
+  erd.png            Entity-relationship diagram (ERD) of the operational database
+  star_schema.png    Star schema diagram of the data warehouse
+/etl                 ETL scripts for loading dimension tables and FactSales table
+  /validation        Queries comparing operational database totals with warehouse totals
 /powerbi
   report.pbix        Power BI report file
+/sql
+  /operational       CREATE TABLE and INSERT scripts for the operational database
+    README.md        Readme file for the operational database
+  /warehouse         CREATE TABLE scripts for the data warehouse dimensions and facts
+    README.md        Readme file for the data warehouse
+README.md            The main readme file
 ```
