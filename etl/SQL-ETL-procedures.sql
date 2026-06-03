@@ -79,7 +79,7 @@ BEGIN
         CAST(DATEPART(WEEK, d)  AS TINYINT)     AS week,
         CAST(DAY(d)             AS TINYINT)     AS day
     FROM NewDates
-    OPTION (MAXRECURSION 1100);
+    OPTION (MAXRECURSION 0);
 
     UPDATE MiniProject.ETL_Control
     SET last_run = GETDATE()
@@ -90,10 +90,7 @@ END;
 GO
 
 -- usp_Load_DimCustomer
-DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimCustomer;
-GO
-
-CREATE PROCEDURE MiniProject.usp_Load_DimCustomer
+CREATE OR ALTER PROCEDURE MiniProject.usp_Load_DimCustomer
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -129,10 +126,7 @@ END;
 GO
 
 -- usp_Load_DimGeography
-DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimGeography;
-GO
-
-CREATE PROCEDURE MiniProject.usp_Load_DimGeography
+CREATE OR ALTER PROCEDURE MiniProject.usp_Load_DimGeography
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -181,10 +175,7 @@ GO
 
 
 -- usp_Load_DimItem
-DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimItem;
-GO
-
-CREATE PROCEDURE MiniProject.usp_Load_DimItem
+CREATE OR ALTER PROCEDURE MiniProject.usp_Load_DimItem
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -252,10 +243,7 @@ END;
 GO
 
 -- usp_Load_FactSales
-DROP PROCEDURE IF EXISTS MiniProject.usp_Load_FactSales;
-GO
-
-CREATE PROCEDURE MiniProject.usp_Load_FactSales
+CREATE OR ALTER PROCEDURE MiniProject.usp_Load_FactSales
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -324,10 +312,7 @@ ALTER TABLE MiniProject.FactSales
     ALTER COLUMN price DECIMAL(18,2) NULL;
 
 -- usp_Run_Full_ETL
-DROP PROCEDURE IF EXISTS MiniProject.usp_Run_Full_ETL;
-GO
-
-CREATE PROCEDURE MiniProject.usp_Run_Full_ETL
+CREATE OR ALTER PROCEDURE MiniProject.usp_Run_Full_ETL
 AS
 BEGIN
     SET NOCOUNT ON;
