@@ -3,17 +3,143 @@ GO
 
 BEGIN TRAN
 
---DimGeography loading procedure
-CREATE OR ALTER PROCEDURE MiniProject.usp_Load_DimGeography
+-- ETL CONTROL TABLE
+IF NOT EXISTS (
+    SELECT 1 FROM sys.tables t
+    JOIN sys.schemas s ON t.schema_id = s.schema_id
+    WHERE s.name = 'MiniProject' AND t.name = 'ETL_Control'
+)
+BEGIN
+    CREATE TABLE MiniProject.ETL_Control (
+        procedure_name  NVARCHAR(100)   NOT NULL,
+        last_run        DATETIME        NOT NULL,
+
+        CONSTRAINT PK_ETL_Control PRIMARY KEY (procedure_name)
+    );
+
+    -- Initialize with a date before earliest data
+    INSERT INTO MiniProject.ETL_Control (procedure_name, last_run)
+    VALUES
+        ('usp_Load_DimDate', '2024-02-01'),
+        ('usp_Load_DimCustomer', '2024-02-01'),
+        ('usp_Load_DimGeography', '2024-02-01'),
+        ('usp_Load_DimItem', '2024-02-01'),
+        ('usp_Load_FactSales', '2024-02-01');
+
+    PRINT 'ETL_Control table created and initialized.';
+END;
+GO
+
+
+-- usp_Load_DimDate
+CREATE OR ALTER PROCEDURE MiniProject.usp_Load_DimDate
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Drop FK constraint temporarily
+    DECLARE @max_key    INT;
+    DECLARE @start_date DATE;
+    DECLARE @end_date   DATE;
+
+    -- DELETE instead of TRUNCATE — respects FK constraints
+    DELETE FROM MiniProject.DimDate;
+
+    SELECT @max_key = ISNULL(MAX(date_key), 0) FROM MiniProject.DimDate;
+
+    SELECT
+        @start_date = '2024-02-01',
+        @end_date   = '2026-12-31';
+
+    WITH DateRange AS (
+        SELECT @start_date AS d
+        UNION ALL
+        SELECT DATEADD(DAY, 1, d)
+        FROM DateRange
+        WHERE d < @end_date
+    ),
+    NewDates AS (
+        SELECT
+            ROW_NUMBER() OVER (ORDER BY d) AS rn,
+            d
+        FROM DateRange
+        WHERE NOT EXISTS (
+            SELECT 1 FROM MiniProject.DimDate dd
+            WHERE dd.date = DateRange.d
+        )
+    )
+    INSERT INTO MiniProject.DimDate (
+        date_key, date, year, quarter, month, week, day
+    )
+    SELECT
+        @max_key + rn                           AS date_key,
+        d                                       AS date,
+        YEAR(d)                                 AS year,
+        DATEPART(QUARTER, d)                    AS quarter,
+        MONTH(d)                                AS month,
+        CAST(DATEPART(WEEK, d)  AS TINYINT)     AS week,
+        CAST(DAY(d)             AS TINYINT)     AS day
+    FROM NewDates
+    OPTION (MAXRECURSION 1100);
+
+    UPDATE MiniProject.ETL_Control
+    SET last_run = GETDATE()
+    WHERE procedure_name = 'usp_Load_DimDate';
+
+    PRINT 'DimDate loaded at ' + CONVERT(NVARCHAR, GETDATE(), 120);
+END;
+GO
+
+-- usp_Load_DimCustomer
+DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimCustomer;
+GO
+
+CREATE PROCEDURE MiniProject.usp_Load_DimCustomer
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @max_key INT; -- To track the current max customer_key for incremental inserts
+    SELECT @max_key = ISNULL(MAX(customer_key), 0) FROM MiniProject.DimCustomer;
+
+    INSERT INTO MiniProject.DimCustomer (
+        customer_key, customer_id, first_name, last_name, address, city, country, email, phone
+    )
+    SELECT
+        @max_key + ROW_NUMBER() OVER (ORDER BY c.customer_id) AS customer_key, -- Assign new keys sequentially starting from current max
+        c.customer_id,
+        c.first_name,
+        c.last_name,
+        c.address,
+        c.city,
+        c.country,
+        c.email,
+        c.phone
+    FROM RentalOperationsDB.MiniProject.Customer c
+    WHERE NOT EXISTS (
+        SELECT 1 FROM MiniProject.DimCustomer dc
+        WHERE dc.customer_id = c.customer_id
+    );
+
+    UPDATE MiniProject.ETL_Control
+    SET last_run = GETDATE()
+    WHERE procedure_name = 'usp_Load_DimCustomer';
+
+    PRINT 'DimCustomer loaded at ' + CONVERT(NVARCHAR, GETDATE(), 120);
+END;
+GO
+
+-- usp_Load_DimGeography
+DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimGeography;
+GO
+
+CREATE PROCEDURE MiniProject.usp_Load_DimGeography
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Drop FK to allow clean operations
     ALTER TABLE MiniProject.FactSales
         DROP CONSTRAINT FK_FactSales_DimGeography;
-
-    DELETE FROM MiniProject.DimGeography;
 
     INSERT INTO MiniProject.DimGeography (
         geography_key,
@@ -25,14 +151,19 @@ BEGIN
         is_manned
     )
     SELECT
-        ROW_NUMBER() OVER (ORDER BY rl.rentallocation_id) AS geography_key,
+        -- geography_key: offset by existing max to avoid collisions
+        ISNULL((SELECT MAX(geography_key) FROM MiniProject.DimGeography), 0) + ROW_NUMBER() OVER (ORDER BY rl.rentallocation_id),
         rl.rentallocation_id,
         rl.name,
         rl.address,
         rl.city,
         rl.country,
         rl.is_manned
-    FROM RentalOperationsDB.MiniProject.RentalLocation rl;
+    FROM RentalOperationsDB.MiniProject.RentalLocation rl
+    WHERE NOT EXISTS (
+        SELECT 1 FROM MiniProject.DimGeography dg
+        WHERE dg.rentallocation_id = rl.rentallocation_id
+    );
 
     -- Recreate FK constraint
     ALTER TABLE MiniProject.FactSales
@@ -40,20 +171,23 @@ BEGIN
             FOREIGN KEY (geography_key)
             REFERENCES MiniProject.DimGeography(geography_key);
 
+    UPDATE MiniProject.ETL_Control
+    SET last_run = GETDATE()
+    WHERE procedure_name = 'usp_Load_DimGeography';
+
+    PRINT 'DimGeography loaded at ' + CONVERT(NVARCHAR, GETDATE(), 120);
 END;
 GO
 
-EXEC RentalDW.MiniProject.usp_Load_DimGeography;
-GO
-SELECT * FROM MiniProject.DimGeography;
 
--- Load DimItems
-CREATE OR ALTER PROCEDURE MiniProject.usp_Load_DimItem
+-- usp_Load_DimItem
+DROP PROCEDURE IF EXISTS MiniProject.usp_Load_DimItem;
+GO
+
+CREATE PROCEDURE MiniProject.usp_Load_DimItem
 AS
 BEGIN
     SET NOCOUNT ON;
-
-    DELETE FROM MiniProject.DimItem;
 
     INSERT INTO MiniProject.DimItem (
         item_key,
@@ -74,29 +208,28 @@ BEGIN
         maintenance_cost
     )
     SELECT
-        ROW_NUMBER() OVER (ORDER BY i.item_id)  AS item_key,
+        ISNULL((SELECT MAX(item_key) FROM MiniProject.DimItem), 0) + ROW_NUMBER() OVER (ORDER BY i.item_id) AS item_key,
         i.item_id,
         i.model_id,
         mo.category_id,
         i.serial_number,
         i.status,
         i.is_usable,
-        mo.name                                 AS model_name,
-        mo.brand                                AS model_brand,
-        ec.name                                 AS category_name,
+        mo.name AS model_name,
+        mo.brand AS model_brand,
+        ec.name AS category_name,
         mo.hourly_rate,
         m.maintenance_id,
         m.maintenance_start,
         m.maintenance_end,
-        m.type                                  AS maintenance_type,
-        m.cost                                  AS maintenance_cost
+        m.type AS maintenance_type,
+        m.cost AS maintenance_cost
     FROM RentalOperationsDB.MiniProject.Item i
     JOIN RentalOperationsDB.MiniProject.Model mo
         ON i.model_id = mo.model_id
     JOIN RentalOperationsDB.MiniProject.EquipmentCategory ec
         ON mo.category_id = ec.category_id
     LEFT JOIN (
-        -- Keep only the most recent maintenance record per item
         SELECT *
         FROM RentalOperationsDB.MiniProject.MaintenanceRecord
         WHERE maintenance_id IN (
@@ -104,185 +237,128 @@ BEGIN
             FROM RentalOperationsDB.MiniProject.MaintenanceRecord
             GROUP BY item_id
         )
-    ) m ON i.item_id = m.item_id;
+    ) m ON i.item_id = m.item_id
+    WHERE NOT EXISTS (
+        SELECT 1 FROM MiniProject.DimItem di
+        WHERE di.item_id = i.item_id
+    );
 
+    UPDATE MiniProject.ETL_Control
+    SET last_run = GETDATE()
+    WHERE procedure_name = 'usp_Load_DimItem';
+
+    PRINT 'DimItem loaded at ' + CONVERT(NVARCHAR, GETDATE(), 120);
 END;
 GO
 
-EXEC RentalDW.MiniProject.usp_Load_DimItem;
+-- usp_Load_FactSales
+DROP PROCEDURE IF EXISTS MiniProject.usp_Load_FactSales;
 GO
-SELECT * FROM MiniProject.DimItem;
 
---Load DimCustomer
-CREATE OR ALTER PROCEDURE MiniProject.usp_Load_DimCustomer
+CREATE PROCEDURE MiniProject.usp_Load_FactSales
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    INSERT INTO MiniProject.DimCustomer
-    (
+    DECLARE @last_run DATETIME;
+    SELECT @last_run = last_run
+    FROM MiniProject.ETL_Control
+    WHERE procedure_name = 'usp_Load_FactSales';
+
+    INSERT INTO MiniProject.FactSales (
+        transaction_id,
+        transactionline_id,
         customer_key,
-        customer_id,
-        first_name,
-        last_name,
-        address,
-        city,
-        country,
-        email,
-        phone
+        startdate_key,
+        enddate_key,
+        geography_key,
+        item_key,
+        total_amount,
+        price,
+        start_time,
+        end_time
     )
     SELECT
-        ROW_NUMBER() OVER (ORDER BY c.customer_id) AS customer_key,
-        c.customer_id,
-        c.first_name,
-        c.last_name,
-        c.address,
-        c.city,
-        c.country,
-        c.email,
-        c.phone
-    FROM RentalOperationsDB.MiniProject.Customer c
+        rt.transaction_id,
+        rtl.transactionline_id,
+        dc.customer_key,
+        dd_start.date_key AS startdate_key,
+        dd_end.date_key AS enddate_key,
+        dg.geography_key,
+        di.item_key,
+        rt.total_amount,
+        rtl.line_amount AS price,
+        CAST(rt.rental_start AS TIME) AS start_time,
+        CAST(rt.rental_end   AS TIME) AS end_time
+        --DATEDIFF(MINUTE, rt.rental_start, rt.rental_end) AS rental_duration_minutes
+    FROM RentalOperationsDB.MiniProject.RentalTransaction AS rt
+    JOIN RentalOperationsDB.MiniProject.RentalTransactionLines AS rtl
+        ON rt.transaction_id = rtl.transaction_id
+    JOIN MiniProject.DimDate AS dd_start
+        ON CAST(rt.rental_start AS DATE) = dd_start.date
+    LEFT JOIN MiniProject.DimDate AS dd_end
+        ON CAST(rt.rental_end AS DATE) = dd_end.date
+    JOIN MiniProject.DimCustomer AS dc
+        ON rt.customer_id = dc.customer_id
+    JOIN MiniProject.DimItem AS di
+        ON rtl.item_id = di.item_id
+    JOIN MiniProject.DimGeography AS dg
+        ON rt.pickup_location_id = dg.rentallocation_id
+    -- Only new transactions since last run
+    WHERE rt.rental_start > @last_run
+    AND NOT EXISTS (
+        SELECT 1 FROM MiniProject.FactSales f
+        WHERE f.transaction_id      = rt.transaction_id
+        AND   f.transactionline_id  = rtl.transactionline_id
+    );
+
+    UPDATE MiniProject.ETL_Control
+    SET last_run = GETDATE()
+    WHERE procedure_name = 'usp_Load_FactSales';
+
+    PRINT 'FactSales loaded at ' + CONVERT(NVARCHAR, GETDATE(), 120);
 END;
 GO
 
-EXEC RentalDW.MiniProject.usp_Load_DimCustomer;
-GO
-SELECT * FROM MiniProject.DimCustomer;
-
---Load DimDate
-CREATE OR ALTER PROCEDURE MiniProject.usp_Load_DimDate
-    @StartDate date,
-    @EndDate date
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    -- Generate the dates between @StartDate and @EndDate with a numbers/tally table approach
-    WITH Numbers AS
-    (
-        -- Generate a sequence of numbers, e.g. 0..880, which can then be added to the start date
-        SELECT TOP (DATEDIFF(day, @StartDate, @EndDate) + 1) -- calculate the range, include both dates
-               -- ROW_NUMBER: every row gets a unique sequential number
-               ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - 1 AS n -- SELECT NULL: Any order is fine, just assign row numbers
-        -- We're not interested in the actual contents. We only need a source that has "many rows".
-        FROM sys.all_objects -- a system view that contains metadata about objects in the database
-    )
-    INSERT INTO MiniProject.DimDate
-    (
-        date_key,
-        [date],
-        [year],
-        quarter,
-        [month],
-        week,
-        [day]
-    )
-    SELECT
-        CAST(CONVERT(char(8), DATEADD(day, n, @StartDate), 112) AS int) AS date_key,
-        DATEADD(day, n, @StartDate) AS [date],
-        YEAR(DATEADD(day, n, @StartDate)) AS [year],
-        DATEPART(QUARTER, DATEADD(day, n, @StartDate)) AS quarter,
-        MONTH(DATEADD(day, n, @StartDate)) AS [month],
-        DATEPART(ISO_WEEK, DATEADD(day, n, @StartDate)) AS week,
-        DAY(DATEADD(day, n, @StartDate)) AS [day]
-    FROM Numbers;
-END;
-GO
-
--- Define the start date and end date of DimDate here
-EXEC RentalDW.MiniProject.usp_Load_DimDate
-    @StartDate = '2024-02-01',
-    @EndDate   = '2026-06-30';
-GO
-
-SELECT * FROM RentalDW.MiniProject.DimDate;
-
-
-/*
-Visual summary:
-
-sys.all_objects
-      │
-      ▼
-ROW_NUMBER()
-      │
-      ▼
-1,2,3,4,...
-      │
-      ▼
--1
-      │
-      ▼
-0,1,2,3,...
-      │
-      ▼
-DATEADD(day, n, @StartDate)
-      │
-      ▼
-2024-02-01
-2024-02-02
-2024-02-03
-...
-2026-06-30
-
-*/
-
--- FactSales loading procedure
 ALTER TABLE MiniProject.FactSales
     ALTER COLUMN price DECIMAL(18,2) NULL;
 
-CREATE OR ALTER PROCEDURE MiniProject.usp_Load_FactSales
-AS 
+-- usp_Run_Full_ETL
+DROP PROCEDURE IF EXISTS MiniProject.usp_Run_Full_ETL;
+GO
+
+CREATE PROCEDURE MiniProject.usp_Run_Full_ETL
+AS
 BEGIN
-	SET NOCOUNT ON;
+    SET NOCOUNT ON;
 
-	DELETE FROM MiniProject.FactSales;
+    PRINT '== ETL Start: ' + CONVERT(NVARCHAR, GETDATE(), 120) + ' ==';
 
-	INSERT INTO MiniProject.FactSales (
-		transaction_id, 
-		transactionline_id, 
-		customer_key, 
-		startdate_key, 
-		enddate_key,
-		geography_key,
-		item_key, 
-		total_amount, 
-		price, 
-		start_time, 
-		end_time)
+    EXEC MiniProject.usp_Load_DimDate;
+    EXEC MiniProject.usp_Load_DimCustomer;
+    EXEC MiniProject.usp_Load_DimGeography;
+    EXEC MiniProject.usp_Load_DimItem;
+    EXEC MiniProject.usp_Load_FactSales;
 
-	SELECT 
-		rt.transaction_id,
-		rtl.transactionline_id,
-		dc.customer_key,
-		dd_start.date_key AS startdate_key,
-		dd_end.date_key AS enddate_key,
-		dg.geography_key,
-		di.item_key,
-		rt.total_amount,
-		rtl.line_amount AS price,
-		CAST(rt.rental_start AS TIME) AS start_time,
-		CAST(rt.rental_end AS TIME) AS end_time
-		--DATEDIFF(MINUTE, rt.rental_start, rt.rental_end) AS rental_duration_minutes,
-	FROM RentalOperationsDB.MiniProject.RentalTransaction AS rt
-	JOIN RentalOperationsDB.MiniProject.RentalTransactionLines AS rtl 
-		ON rt.transaction_id = rtl.transaction_id
-	JOIN MiniProject.DimDate AS dd_start
-		ON CAST(rt.rental_start AS DATE) = dd_start.date
-	LEFT JOIN MiniProject.DimDate AS dd_end
-		ON CAST(rt.rental_end AS DATE) = dd_end.date
-	JOIN MiniProject.DimCustomer AS dc
-		ON rt.customer_id = dc.customer_id
-	JOIN MiniProject.DimItem AS di
-		ON rtl.item_id = di.item_id
-	JOIN MiniProject.DimGeography AS dg
-		ON rt.pickup_location_id = dg.rentallocation_id
-
+    PRINT '== ETL Complete: ' + CONVERT(NVARCHAR, GETDATE(), 120) + ' ==';
 END;
+GO
 
 
-EXEC MiniProject.usp_Load_FactSales;
-SELECT * FROM MiniProject.FactSales;
+-- EXECUTE FULL ETL
+EXEC MiniProject.usp_Run_Full_ETL;
+GO
+
+
+-----------------------------------------------------------
+UPDATE RentalDW.MiniProject.ETL_Control
+SET last_run = '2023-01-01';
+
+EXEC MiniProject.usp_Run_Full_ETL;
+GO
+
+SELECT * FROM MiniProject.ETL_Control;
+
+
 ROLLBACK
 COMMIT
-GO
